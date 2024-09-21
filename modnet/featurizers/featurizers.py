@@ -86,19 +86,28 @@ class MODFeaturizer(abc.ABC):
             The featurized DataFrame.
 
         """
-        df_composition = pd.DataFrame([])
+        # Initialize DataFrames to avoid issues with joining empty DataFrames
+        # which may occur with GNN enhanced featurizers
+        df_composition = df.copy()
+        df_site = df.copy()
+        df_structure = df.copy()
+
+        
         if self.composition_featurizers or self.oxid_composition_featurizers:
             df_composition = self.featurize_composition(df)
 
-        df_structure = pd.DataFrame([])
+        
         if self.structure_featurizers:
             df_structure = self.featurize_structure(df)
 
-        df_site = pd.DataFrame([])
+        
         if self.site_featurizers:
             df_site = self.featurize_site(df)
 
-        return df_composition.join(df_structure.join(df_site, lsuffix="l"), rsuffix="r")
+        final_df = df_composition.join(df_structure.join(df_site, lsuffix="l"), rsuffix="r")
+        # now has to remove the structure columns that are reminiscent of the copies
+        final_df = final_df.drop(columns=['structure', 'structurel', 'structurer'], errors='ignore')
+        return final_df
 
     def _fit_apply_featurizers(
         self,
